@@ -39,6 +39,7 @@ function STIG-ComplianceReg([String]$RegPath, [String]$Key, [String]$Value, [Str
     }
 }
 
+#AuditPol function
 function STIG-ComplianceAuditPolLogging([String]$SubCategory, [String]$Success, [String]$Failure, [String]$Description) {
     Write-Host $Description -BackgroundColor Black -ForegroundColor Magenta
     Write-Host "Forcing values..." -BackgroundColor Black -ForegroundColor Yellow
@@ -47,14 +48,14 @@ function STIG-ComplianceAuditPolLogging([String]$SubCategory, [String]$Success, 
     Write-Host "Done..." -BackgroundColor Black -ForegroundColor Cyan
 }
 
-# This hash table will formated as such:
-# V_NUMBER : [RegPath, Key, Value, Type, Description]
-# V_NUMBER is the Stig Vulnerability Number
-# RegPath is the Registry Path
-# Key is the Key located at the RegPath
-# Value is the value of the Key
-# Type is the Key type
-# Description is the description given in the Stig
+#This hash table will formated as such:
+#V_NUMBER : [RegPath, Key, Value, Type, Description]
+#V_NUMBER is the Stig Vulnerability Number
+#RegPath is the Registry Path
+#Key is the Key located at the RegPath
+#Value is the value of the Key
+#Type is the Key type
+#Description is the V_NUMBER description from the STIG
 
 $hashStigReg = [ordered]@{
 
@@ -501,6 +502,11 @@ $hashStigReg = [ordered]@{
 #AuditPol hash table
 #Subcategories can be found with /auditpol /list /subcategory:* /V
 #GUID's are used because you can't trust scripts with spaces if you can avoid it
+#Formated as V_NUMBER : SubCategory, Success, Failure, Description
+#V_Number is the STIG vulnerability number
+#SubCategory is the GUID provided by the auditpol command above
+#Success and Failure will be set to "enable" or "disable" and corrospond to auditpol's settings
+#Description is the V_NUMBER description from the STIG
 
 $hashStigAuditPolLogging = [ordered]@{
     "205627" = [ordered]@{
@@ -587,11 +593,16 @@ $hashStigAuditPolLogging = [ordered]@{
         Failure = "enable";
         Description = "Maintaining an audit trail of system activity logs can help identify configuration errors, troubleshoot service disruptions, and analyze compromises that have occurred, as well as detect attacks. Audit logs are necessary to provide a trail of evidence in case the system or network is compromised. Collecting this data is essential for analyzing the security of information assets and detecting signs of suspicious and unexpected behavior. Auditing for other object access records events related to the management of task scheduler jobs and COM+ objects.";
     };
-
-
 };
 
 #Security Edits hash table
+#The cfg file is generated earlier in the script
+#I think it's a inf file, but oh well
+#Formated as V_NUMBER : StringToFind, Replacement, Description
+#V_Number is the STIG vulnerability number
+#StringToFind is the string it is looking for in the cfg file
+#Replacement is the replacement text
+#Description is the V_NUMBER description from the STIG
 
 $hashStigSecurityEdits = [ordered]@{
     "205629" = [ordered]@{
@@ -627,13 +638,13 @@ foreach ($hashStigKey in $hashStigAuditPolLogging.Keys) {
 
 foreach ($hashStigKey in $hashStigSecurityEdits.Keys) {
     STIG-ComplianceSecEdit -StringToFind $hashStigSecurityEdits.$hashStigKey.Item("StringToFind") -Replacement $hashStigSecurityEdits.$hashStigKey.Item("Replacement") -Description $hashStigSecurityEdits.$hashStigKey.Item("Description")
-
 }
 
-$SecEditCfg
+$SecEditCfg #Display the output
 $SecEditCfg > C:\secpol_1.cfg
 secedit /validate C:\secpol_1.cfg
 if($? -eq $True) {
+    #C:\Windows\security\local.sdb is the default secedit database
     secedit /configure /db C:\Windows\security\local.sdb /cfg C:\secpol_1.cfg
 }
 if($? -eq $True) {
@@ -641,6 +652,6 @@ if($? -eq $True) {
     Remove-Item C:\secpol_1.cfg -Force
 }
 
-# One offs
-# Uninstall Powershell 2.0
+#One offs
+#V-205685 - Uninstall Powershell 2.0
 Uninstall-WindowsFeature -Name PowerShell-v2
